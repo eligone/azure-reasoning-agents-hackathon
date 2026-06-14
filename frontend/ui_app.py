@@ -13,7 +13,7 @@ from agents.curator import run_learning_curator
 from agents.executor import evaluate_study_plan, run_assessment_executor
 from time_distributor import distribute_study_hours
 
-# Import our brand new custom frontend component module
+# Import our custom frontend component module
 from frontend.quiz_component import render_interactive_quiz
 
 st.set_page_config(page_title="Multi-Agent AI Coach", page_icon="🤖", layout="wide")
@@ -35,6 +35,10 @@ if "quiz_text" not in st.session_state:
     st.session_state.quiz_text = ""
 if "active_profile" not in st.session_state:
     st.session_state.active_profile = None
+
+# Initialize persistent progress tracking structures
+if "completed_milestones" not in st.session_state:
+    st.session_state.completed_milestones = set()
 
 with st.sidebar:
     st.header("Plan Configurations")
@@ -65,6 +69,7 @@ if generate_clicked:
     st.session_state.pipeline_ready = False
     st.session_state.warning_triggered = False
     st.session_state.quiz_text = ""  # Reset quiz on a new profile run
+    st.session_state.completed_milestones = set()  # Reset completed tracking logs
     
     # Flush out old multi-turn quiz tracking states to allow a fresh evaluation session
     if "quiz_index" in st.session_state: del st.session_state.quiz_index
@@ -148,9 +153,44 @@ if st.session_state.pipeline_ready:
         col1, col2 = st.columns([2, 1])
         with col1:
             st.header("📝 Custom Certification Roadmap")
+            
+            # Interactive Progress Tracking Checklist Panel
+            st.subheader("🏁 Track Your Progress Below")
+            st.write("Check off your completed segments to watch your dashboard chart update live.")
+            
+            # Draw individual checklist nodes matching the planned timeline
+            total_weeks_planned = st.session_state.active_profile.target_weeks
+            for w in range(1, total_weeks_planned + 1):
+                milestone_key = f"Week {w}"
+                is_checked = milestone_key in st.session_state.completed_milestones
+                
+                if st.checkbox(f"Mark {milestone_key} Milestone as Fully Complete", value=is_checked, key=f"check_{w}"):
+                    st.session_state.completed_milestones.add(milestone_key)
+                else:
+                    st.session_state.completed_milestones.discard(milestone_key)
+            
+            st.write("---")
             st.markdown(st.session_state.roadmap)
+            
         with col2:
             st.header("📊 Algorithmic Hours Allocation")
+            
+            # Dynamically compute remaining study targets to pass to the graphic visualizer
+            completed_count = len(st.session_state.completed_milestones)
+            completion_factor = max(0.0, 1.0 - (completed_count / total_weeks_planned))
+            
+            # Scale down the displayed bar values based on user completion ticks
+            live_chart_data = {domain: int(hours * completion_factor) for domain, hours in st.session_state.hours_allocation.items()}
+            
+            st.bar_chart(live_chart_data)
+            
+            # Display tracking feedback labels
+            if completed_count == total_weeks_planned:
+                st.success("🎉 All objectives met! You are 100% prepared to sit your certification exam.")
+            else:
+                st.metric("Timeline Milestone Progress", f"{completed_count} / {total_weeks_planned} Weeks", f"{int((completed_count/total_weeks_planned)*100)}% Complete")
+            
+            st.write("---")
             for domain, target_hours in st.session_state.hours_allocation.items():
                 st.info(f"**{domain}**: {target_hours} total hours allocated")
                 
@@ -163,8 +203,13 @@ if st.session_state.pipeline_ready:
         
         if st.button("Generate Domain Practice Questions"):
             with st.spinner("Invoking Agent 2 to design technical assessment queries..."):
-                st.session_state.quiz_text = run_assessment_executor(st.session_state.roadmap)
+                weak_areas = [d for d, r in st.session_state.active_profile.domain_ratings.items() if r <= 3]
+                focus_topics = ", ".join(weak_areas) if weak_areas else "Core Fundamentals"
+                
+                st.session_state.quiz_text = run_assessment_executor(
+                    st.session_state.active_profile.exam_target,
+                    specific_topic=f"Focus deeply on these technical sub-domains: {focus_topics}"
+                )
         
-        # Invoke our newly organized modular component function to render the radio inputs
         if st.session_state.quiz_text:
             render_interactive_quiz(st.session_state.quiz_text)
