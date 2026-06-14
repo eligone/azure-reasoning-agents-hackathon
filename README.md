@@ -8,6 +8,10 @@ This application is built to run natively within the Azure AI Foundry ecosystem.
 
 ---
 
+## 🎥 Demo Video
+
+Watch the full demo here: https://youtu.be/w72ZexuFnR4
+
 ## 🛠️ System Overview and Architecture
 
 Our application distributes processing responsibilities across an interconnected assembly line of specialized agents rather than relying on loose text handoffs.
