@@ -1,28 +1,56 @@
 from agents.planner import run_syllabus_planner
-from agents.executor import run_assessment_executor
+from agents.executor import evaluate_study_plan, run_assessment_executor
 
 def main():
-    target_exam = "Azure Developer Associate AZ-204"
-    print(f"Initializing Modular Cloud Multi-Agent Pipeline for {target_exam}...")
+    print("==================================================")
+    print("   Welcome to Your Personalized Multi-Agent Coach")
+    print("==================================================")
+    
+    # Collect dynamic user preferences directly from the terminal console
+    target_exam = input("What certification or exam are you practicing for? ")
+    days_per_week = input("How many days a week can you dedicate to studying? ")
+    hours_per_day = input("How many hours per day can you study on those days? ")
+    
+    print(f"\nInitializing interactive pipeline for {target_exam}...")
+    
+    feedback = None
+    attempts = 0
+    max_revisions = 3
+    final_roadmap = ""
     
     try:
-        print("\n[Invoking Agent 1] Executing Syllabus Planner module...")
-        roadmap = run_syllabus_planner(target_exam)
+        # Agent Collaboration Loop
+        while attempts < max_revisions:
+            attempts += 1
+            print(f"[Iteration {attempts}] Passing draft to Agent 2 for quality control audit...")
+            final_roadmap = run_syllabus_planner(target_exam, days_per_week, hours_per_day, feedback)
+            
+            print("[Iteration {attempts}] Passing draft to Agent 2 for quality control audit...")
+            audit_result = evaluate_study_plan(final_roadmap, days_per_week, hours_per_day)
+            
+            if audit_result.startswith("REJECT"):
+                print("\n❌ Agent 2 REJECTED the plan! Sending revision notes back to Agent 1...")
+                feedback = audit_result
+            else:
+                print("\n✅ Agent 2 APPROVED the study timeline layout!")
+                break
         
+        # Print the final consensus blueprint layout
         print("\n==============================================")
-        print("=== AGENT 1 (SYLLABUS PLANNER) RESPONDED ===")
+        print("===        FINAL APPROVED STUDY PLAN       ===")
         print("==============================================")
-        print(roadmap)
+        print(final_roadmap)
         
-        print("\n[Invoking Agent 2] Handing context over to Assessment Executor module...")
-        practice_quiz = run_assessment_executor(roadmap)
+        # Trigger the final evaluation step
+        print("\n[Invoking Agent 2] Constructing your customized test simulation questions...")
+        practice_quiz = run_assessment_executor(final_roadmap)
         
         print("\n=================================================")
-        print("=== AGENT 2 (ASSESSMENT EXECUTOR) RESPONDED ===")
+        print("===        YOUR CUSTOM PRACTICE QUIZ          ===")
         print("=================================================")
         print(practice_quiz)
         
-        print("\nModular system run clean. Pipeline shutdown pristine.")
+        print("\nInteractive pipeline execution clean. Personal session closed.")
         
     except Exception as error_log:
         print(f"\nPipeline Execution Failed: {error_log}")
