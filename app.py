@@ -5,7 +5,6 @@ from agents.planner import run_syllabus_planner
 from agents.curator import run_learning_curator
 from agents.executor import evaluate_study_plan, run_assessment_executor
 from agents.reviewer import run_remediation_reviewer
-from quiz_engine import run_interactive_quiz
 from time_distributor import distribute_study_hours
 
 def main():
@@ -138,51 +137,27 @@ def main():
         current_topic = "Core Fundamentals and Architecture Models"
         
         while True:
-            print(f"\n[Invoking Agent 2] Constructing 5 specialized testing questions for: '{current_topic}'...")
+            print(f"\n[Invoking Agent 2] Constructing specialized testing questions for: '{current_topic}'...")
             raw_quiz_text = run_assessment_executor(
                 final_roadmap, 
                 specific_topic=current_topic if current_topic != "Core Fundamentals and Architecture Models" else None
             )
             
-            score, total_q = run_interactive_quiz(raw_quiz_text)
+            print("\n=================================================")
+            print("===        RAW ASSESSMENT TARGET LOG          ===")
+            print("=================================================")
+            print(raw_quiz_text)
+            print("=================================================")
             
-            passing_threshold = 0.70
-            success_rate = score / total_q if total_q > 0 else 0
-            
-            if success_rate >= passing_threshold:
-                print("\n🏆 EXCELLENT WORK! You passed the benchmark capability threshold for this domain.")
-                print("The system recommends advancing straight onto the next milestone section.")
-                
-                choice = input("\nDo you wish to advance to the next topic or quit? (next/quit): ").strip().lower()
-                if choice in ["next", "n"]:
-                    current_topic = "Advanced Scalability, Networking, and Security Implementations"
-                    print(f"\nRouting track advanced. Loading next domain module...")
-                    continue
-                else:
-                    print("\nSession closed cleanly. Keep up the amazing study pace!")
-                    break
+            # Simple terminal menu option to continue or exit the loops cleanly
+            choice = input("\nDo you wish to advance to the next topic or quit? (next/quit): ").strip().lower()
+            if choice in ["next", "n"]:
+                current_topic = "Advanced Scalability, Networking, and Security Implementations"
+                print(f"\nRouting track advanced. Loading next domain module...")
+                continue
             else:
-                print("\n⚠️  BENCHMARK NOT MET: Score fell below the target 70% proficiency barrier.")
-                print("[Invoking Agent 3] Routing session to Personalized Remediation Reviewer...")
-                
-                critique = run_remediation_reviewer(current_topic, score, total_q)
-                print("\n======================================================================")
-                print("💡  AGENT 3 COACHING INSIGHTS & STRATEGY REPORT")
-                print("======================================================================")
-                print(critique)
-                print("======================================================================")
-                
-                retry_choice = input("\nWould you like to retry this domain, skip it, or quit? (retry/skip/quit): ").strip().lower()
-                if retry_choice in ["quit", "q"]:
-                    print("\nSession closed cleanly. See you next time!")
-                    break
-                elif retry_choice in ["skip", "s"]:
-                    print("\nNo worries! Advancing you onto the next timeline milestone block anyway.")
-                    current_topic = "Advanced Scalability, Networking, and Security Implementations"
-                    continue
-                else:
-                    print(f"\nResetting module tracking. Invoking a new custom variant query loop for '{current_topic}'...")
-                    continue
+                print("\nSession closed cleanly. Keep up the amazing study pace!")
+                break
                     
     except Exception as error_log:
         print(f"\nPipeline Execution Failed: {error_log}")

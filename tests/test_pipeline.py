@@ -3,7 +3,7 @@ import pytest
 from unittest.mock import patch, MagicMock
 from models import LearnerProfile
 from agents.profiler import run_learner_profiler
-from quiz_engine import run_interactive_quiz
+from frontend.quiz_component import render_interactive_quiz
 from time_distributor import distribute_study_hours
 
 def test_learner_profile_valid_bounds():
