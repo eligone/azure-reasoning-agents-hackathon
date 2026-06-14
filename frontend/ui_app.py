@@ -14,7 +14,7 @@ from agents.executor import evaluate_study_plan, run_assessment_executor
 from time_distributor import distribute_study_hours
 
 # Import our brand new custom frontend component module
-from quiz_component import render_interactive_quiz
+from frontend.quiz_component import render_interactive_quiz
 
 st.set_page_config(page_title="Multi-Agent AI Coach", page_icon="🤖", layout="wide")
 
@@ -65,6 +65,12 @@ if generate_clicked:
     st.session_state.pipeline_ready = False
     st.session_state.warning_triggered = False
     st.session_state.quiz_text = ""  # Reset quiz on a new profile run
+    
+    # Flush out old multi-turn quiz tracking states to allow a fresh evaluation session
+    if "quiz_index" in st.session_state: del st.session_state.quiz_index
+    if "quiz_score" in st.session_state: del st.session_state.quiz_score
+    if "answer_submitted" in st.session_state: del st.session_state.answer_submitted
+    if "quiz_completed" in st.session_state: del st.session_state.quiz_completed
     
     with st.spinner("Invoking multi-agent pipeline layers..."):
         total_budget = days_per_week * hours_per_day * target_weeks
