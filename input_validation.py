@@ -1,9 +1,10 @@
+from models import LearnerProfile
+
 def get_validated_exam():
     """
     Displays a strict numeric menu for selecting a valid Azure certification,
     completely blocking arbitrary or invalid text input.
     """
-    # Explicitly mapped certifications to guarantee valid targets
     azure_certs = {
         1: "Azure Fundamentals (AZ-900)",
         2: "Azure Developer Associate (AZ-204)",
@@ -55,3 +56,30 @@ def get_study_duration_weeks():
         52, 
         "weeks"
     )
+
+def gather_full_learner_profile():
+    """
+    Master collection wrapper. Gathers all user parameters, computes 
+    the absolute time metrics, and instantiates the rigid Pydantic contract object.
+    """
+    selected_exam = get_validated_exam()
+    days_per_week = get_validated_number("How many days a week can you dedicate to studying? ", 1, 7, "days")
+    hours_per_day = get_validated_number("How many hours per day can you study on those days? ", 1, 24, "hours")
+    target_weeks = get_study_duration_weeks()
+    
+    # Capture qualitative background for our new profiling agent pipeline
+    print("\nOptional Profile Customization:")
+    background_text = input("Describe your background experience or focus areas (or press enter to skip): ").strip()
+    
+    total_budget = days_per_week * hours_per_day * target_weeks
+    
+    profile = LearnerProfile(
+        exam_target=selected_exam,
+        days_per_week=days_per_week,
+        hours_per_day=hours_per_day,
+        target_weeks=target_weeks,
+        total_hour_budget=total_budget
+    )
+    
+    # Return both the profile contract and the raw background descriptive string to main
+    return profile, background_text if background_text else None

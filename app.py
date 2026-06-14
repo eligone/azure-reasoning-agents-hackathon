@@ -1,4 +1,5 @@
-from input_validation import get_validated_exam, get_validated_number, get_study_duration_weeks
+from input_validation import gather_full_learner_profile
+from agents.profiler import run_learner_profiler
 from agents.planner import run_syllabus_planner
 from agents.executor import evaluate_study_plan, run_assessment_executor
 from agents.reviewer import run_remediation_reviewer
@@ -9,14 +10,26 @@ def main():
     print("   Welcome to Your Personalized Multi-Agent Coach")
     print("==================================================")
     
-    target_exam = get_validated_exam()
-    days_per_week = get_validated_number("How many days a week can you dedicate to studying? ", 1, 7, "days")
-    hours_per_day = get_validated_number("How many hours per day can you study on those days? ", 1, 24, "hours")
-    target_weeks = get_study_duration_weeks()
+    # Gathers baseline tracking metrics and raw background strings
+    user_profile, raw_background = gather_full_learner_profile()
     
-    print(f"\nInitializing interactive pipeline for {target_exam}...")
+    # Trigger Agent 4: The Learner Profiling Agent
+    print("\n[Invoking Agent 4] Analyzing professional background text parameters...")
+    calculated_ratings = run_learner_profiler(user_profile.exam_target, raw_background)
     
-    feedback = f"CRITICAL REQUIREMENT: The final schedule must fit completely within a maximum duration of EXACTLY {target_weeks} calendar weeks."
+    # Save the calculated metrics directly into our secure data contract container
+    user_profile.domain_ratings = calculated_ratings
+    
+    print("\n==============================================")
+    print("📋      AGENT 4: INITIAL LEARNER PROFILE       ")
+    print("==============================================")
+    for domain, rating in user_profile.domain_ratings.items():
+        print(f"  • {domain}: {rating}/5 Level")
+    print("==============================================")
+    
+    print(f"\nInitializing interactive pipeline for {user_profile.exam_target}...")
+    
+    feedback = f"CRITICAL REQUIREMENT: The final schedule must fit completely within a maximum duration of EXACTLY {user_profile.target_weeks} calendar weeks."
     attempts = 0
     max_revisions = 3
     final_roadmap = ""
@@ -25,11 +38,20 @@ def main():
     try:
         while attempts < max_revisions:
             attempts += 1
-            final_roadmap = run_syllabus_planner(target_exam, days_per_week, hours_per_day, feedback)
-            audit_result = evaluate_study_plan(final_roadmap, days_per_week, hours_per_day)
+            final_roadmap = run_syllabus_planner(
+                user_profile.exam_target, 
+                user_profile.days_per_week, 
+                user_profile.hours_per_day, 
+                feedback
+            )
+            audit_result = evaluate_study_plan(
+                final_roadmap, 
+                user_profile.days_per_week, 
+                user_profile.hours_per_day
+            )
             
-            if audit_result.startswith("REJECT") or f"{target_weeks} weeks" not in final_roadmap.lower():
-                feedback = f"{audit_result} \nReminder: MUST FIT IN {target_weeks} WEEKS."
+            if audit_result.startswith("REJECT") or f"{user_profile.target_weeks} weeks" not in final_roadmap.lower():
+                feedback = f"{audit_result} \nReminder: MUST FIT IN {user_profile.target_weeks} WEEKS."
                 is_cram_needed = True
             else:
                 is_cram_needed = False
@@ -40,8 +62,8 @@ def main():
             print("\n======================================================================")
             print("⚠️  MULTI-AGENT SYSTEM NOTICE: STUDY TIMELINE DISCLAIMER WARNING")
             print("======================================================================")
-            print(f"Our auditing agent notes that trying to master all domains for '{target_exam}'")
-            print(f"within {target_weeks} weeks under your current hourly availability profile is highly discouraged.")
+            print(f"Our auditing agent notes that trying to master all domains for '{user_profile.exam_target}'")
+            print(f"within {user_profile.target_weeks} weeks under your current hourly availability profile is highly discouraged.")
             print("The schedule will feel severely crammed, and you risk hitting immediate burnout.")
             print("----------------------------------------------------------------------")
             
@@ -56,13 +78,15 @@ def main():
         print("==============================================")
         print(final_roadmap)
         
-        
-# Adaptive Multi-Turn Testing Block
+        # Adaptive Multi-Turn Testing Block
         current_topic = "Core Fundamentals and Architecture Models"
         
         while True:
             print(f"\n[Invoking Agent 2] Constructing 5 specialized testing questions for: '{current_topic}'...")
-            raw_quiz_text = run_assessment_executor(final_roadmap, specific_topic=current_topic if current_topic != "Core Fundamentals and Architecture Models" else None)
+            raw_quiz_text = run_assessment_executor(
+                final_roadmap, 
+                specific_topic=current_topic if current_topic != "Core Fundamentals and Architecture Models" else None
+            )
             
             score, total_q = run_interactive_quiz(raw_quiz_text)
             
@@ -73,7 +97,6 @@ def main():
                 print("\n🏆 EXCELLENT WORK! You passed the benchmark capability threshold for this domain.")
                 print("The system recommends advancing straight onto the next milestone section.")
                 
-                # Added an explicit quit option to the prompt entry line
                 choice = input("\nDo you wish to advance to the next topic or quit? (next/quit): ").strip().lower()
                 if choice in ["next", "n"]:
                     current_topic = "Advanced Scalability, Networking, and Security Implementations"
@@ -93,7 +116,6 @@ def main():
                 print(critique)
                 print("======================================================================")
                 
-                # Added an explicit quit option to the retry check block
                 retry_choice = input("\nWould you like to retry this domain, skip it, or quit? (retry/skip/quit): ").strip().lower()
                 if retry_choice in ["quit", "q"]:
                     print("\nSession closed cleanly. See you next time!")
