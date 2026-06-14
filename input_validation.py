@@ -44,3 +44,14 @@ def get_validated_number(prompt, min_val, max_val, unit_name):
             print(f"❌ Outside logical range: Please enter a number between {min_val} and {max_val} for {unit_name}.")
         except ValueError:
             print("❌ Numeric mismatch: Please enter a clean, whole number integer.")
+
+def get_study_duration_weeks():
+    """
+    Asks the user how many total weeks they want to finish their study plan within.
+    """
+    return get_validated_number(
+        "In how many weeks do you want to complete this certification study plan? ", 
+        1, 
+        52, 
+        "weeks"
+    )
