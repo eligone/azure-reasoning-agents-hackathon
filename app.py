@@ -1,35 +1,107 @@
-from input_validation import get_validated_exam, get_validated_number, get_study_duration_weeks
+import concurrent.futures
+from input_validation import gather_full_learner_profile
+from agents.profiler import run_learner_profiler
 from agents.planner import run_syllabus_planner
+from agents.curator import run_learning_curator
 from agents.executor import evaluate_study_plan, run_assessment_executor
-from quiz_engine import run_interactive_quiz
+from agents.reviewer import run_remediation_reviewer
+from time_distributor import distribute_study_hours
 
 def main():
     print("==================================================")
     print("   Welcome to Your Personalized Multi-Agent Coach")
     print("==================================================")
     
-    target_exam = get_validated_exam()
-    days_per_week = get_validated_number("How many days a week can you dedicate to studying? ", 1, 7, "days")
-    hours_per_day = get_validated_number("How many hours per day can you study on those days? ", 1, 24, "hours")
-    target_weeks = get_study_duration_weeks()
+    # Gathers baseline tracking metrics and raw background strings
+    user_profile, raw_background = gather_full_learner_profile()
     
-    print(f"\nInitializing interactive pipeline for {target_exam}...")
+    # Trigger Agent 4: The Learner Profiling Agent
+    print("\n[Invoking Agent 4] Analyzing professional background text parameters...")
+    calculated_ratings = run_learner_profiler(user_profile.exam_target, raw_background)
     
-    feedback = f"CRITICAL REQUIREMENT: The final schedule must fit completely within a maximum duration of EXACTLY {target_weeks} calendar weeks."
+    # Save the calculated metrics directly into our secure data contract container
+    user_profile.domain_ratings = calculated_ratings
+    
+    print("\n==============================================")
+    print("📋      AGENT 4: INITIAL LEARNER PROFILE       ")
+    print("==============================================")
+    for domain, rating in user_profile.domain_ratings.items():
+        print(f"  • {domain}: {rating}/5 Level")
+    print("==============================================")
+    
+    # Compute algorithmic hour distributions using Largest Remainder Method
+    print("\n[Running Time Distributor] Running Largest Remainder Algorithm calculations...")
+    calculated_hours_map = distribute_study_hours(
+        user_profile.domain_ratings,
+        user_profile.target_weeks,
+        user_profile.days_per_week,
+        user_profile.hours_per_day
+    )
+    
+    print("\n==============================================")
+    print("📊    ALGORITHMIC TARGET HOURS ALLOCATION     ")
+    print("==============================================")
+    for domain, hours in calculated_hours_map.items():
+        print(f"  • {domain}: {hours} Total Target Hours")
+    print("==============================================")
+    
+    print(f"\nInitializing interactive pipeline for {user_profile.exam_target}...")
+    
+    # Inject exact mathematical breakdown constraints into the prompt context stream
+    hours_breakdown_string = ", ".join([f"Spend exactly {h} hours on {d}" for d, h in calculated_hours_map.items()])
+    feedback = (
+        f"CRITICAL REQUIREMENT: The final schedule must fit completely within a maximum duration of EXACTLY {user_profile.target_weeks} calendar weeks. "
+        f"You must strictly respect this exact algorithmic hour allocation breakdown: {hours_breakdown_string}."
+    )
+    
     attempts = 0
     max_revisions = 3
     final_roadmap = ""
+    curated_resources = ""
     is_cram_needed = False
     
     try:
+        print("\n[Invoking Concurrent Workers] Launching Planner and Curator agents in parallel threads...")
+        
+        # Execute independent cloud requests concurrently to minimize system latency
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            future_plan = executor.submit(
+                run_syllabus_planner, 
+                user_profile.exam_target, 
+                user_profile.days_per_week, 
+                user_profile.hours_per_day, 
+                feedback
+            )
+            future_resources = executor.submit(
+                run_learning_curator, 
+                user_profile.exam_target, 
+                user_profile.domain_ratings
+            )
+            
+            # Reconverge parallel workers and harvest strings cleanly
+            final_roadmap = future_plan.result()
+            curated_resources = future_resources.result()
+
+        # Execute our multi-agent quality auditing check loop
         while attempts < max_revisions:
             attempts += 1
-            final_roadmap = run_syllabus_planner(target_exam, days_per_week, hours_per_day, feedback)
-            audit_result = evaluate_study_plan(final_roadmap, days_per_week, hours_per_day)
+            audit_result = evaluate_study_plan(
+                final_roadmap, 
+                user_profile.days_per_week, 
+                user_profile.hours_per_day
+            )
             
-            if audit_result.startswith("REJECT") or f"{target_weeks} weeks" not in final_roadmap.lower():
-                feedback = f"{audit_result} \nReminder: MUST FIT IN {target_weeks} WEEKS."
+            if audit_result.startswith("REJECT") or f"{user_profile.target_weeks} weeks" not in final_roadmap.lower():
+                feedback = f"{audit_result} \nReminder: MUST FIT IN {user_profile.target_weeks} WEEKS."
                 is_cram_needed = True
+                
+                # Standalone sequential re-evaluation if the auditor triggers a reject event
+                final_roadmap = run_syllabus_planner(
+                    user_profile.exam_target, 
+                    user_profile.days_per_week, 
+                    user_profile.hours_per_day, 
+                    feedback
+                )
             else:
                 is_cram_needed = False
                 feedback = None
@@ -39,8 +111,8 @@ def main():
             print("\n======================================================================")
             print("⚠️  MULTI-AGENT SYSTEM NOTICE: STUDY TIMELINE DISCLAIMER WARNING")
             print("======================================================================")
-            print(f"Our auditing agent notes that trying to master all domains for '{target_exam}'")
-            print(f"within {target_weeks} weeks under your current hourly availability profile is highly discouraged.")
+            print(f"Our auditing agent notes that trying to master all domains for '{user_profile.exam_target}'")
+            print(f"within {user_profile.target_weeks} weeks under your current hourly availability profile is highly discouraged.")
             print("The schedule will feel severely crammed, and you risk hitting immediate burnout.")
             print("----------------------------------------------------------------------")
             
@@ -55,14 +127,38 @@ def main():
         print("==============================================")
         print(final_roadmap)
         
-        print("\n[Invoking Agent 2] Constructing your customized test simulation questions...")
-        raw_quiz_text = run_assessment_executor(final_roadmap)
+        print("\n==============================================")
+        print("📚   CURATED MICROSOFT LEARN RECOMMENDATIONS   ")
+        print("==============================================")
+        print(curated_resources)
+        print("==============================================")
         
-        # Call our clean, imported utility engine module
-        run_interactive_quiz(raw_quiz_text)
+        # Adaptive Multi-Turn Testing Block
+        current_topic = "Core Fundamentals and Architecture Models"
         
-        print("\nInteractive pipeline execution clean. Personal session closed.")
-        
+        while True:
+            print(f"\n[Invoking Agent 2] Constructing specialized testing questions for: '{current_topic}'...")
+            raw_quiz_text = run_assessment_executor(
+                final_roadmap, 
+                specific_topic=current_topic if current_topic != "Core Fundamentals and Architecture Models" else None
+            )
+            
+            print("\n=================================================")
+            print("===        RAW ASSESSMENT TARGET LOG          ===")
+            print("=================================================")
+            print(raw_quiz_text)
+            print("=================================================")
+            
+            # Simple terminal menu option to continue or exit the loops cleanly
+            choice = input("\nDo you wish to advance to the next topic or quit? (next/quit): ").strip().lower()
+            if choice in ["next", "n"]:
+                current_topic = "Advanced Scalability, Networking, and Security Implementations"
+                print(f"\nRouting track advanced. Loading next domain module...")
+                continue
+            else:
+                print("\nSession closed cleanly. Keep up the amazing study pace!")
+                break
+                    
     except Exception as error_log:
         print(f"\nPipeline Execution Failed: {error_log}")
 
